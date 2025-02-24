@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Firebase Admin & Rota Editor</title>
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --primary-hover: #0056b3;
+      --danger-color: #dc3545;
+      --danger-hover: #c82333;
+      --bg-color: #f3f3f3;
+      --text-color: #333;
+      --container-bg: #fff;
+    }
+    [data-theme="dark"] {
+      --bg-color: #222;
+      --text-color: #eee;
+      --container-bg: #333;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--container-bg);
+      padding: 20px;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    h1, h2, h3 { margin-top: 0; }
+    a { color: var(--primary-color); }
+    .hidden { display: none; }
+    .form-group { margin-bottom: 1em; }
+    label { display: block; margin-bottom: 0.3em; }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.5em;
+      box-sizing: border-box;
+      margin-bottom: 0.5em;
+    }
+    .btn {
+      padding: 8px 16px;
+      margin-top: 8px;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .logout-btn { background: var(--danger-color); margin-left: 1em; }
+    .logout-btn:hover { background: var(--danger-hover); }
+    .tabs { display: flex; gap: 10px; margin: 20px 0; }
+    .tab-btn {
+      padding: 8px 16px;
+      background: #ccc;
+      color: #000;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .tab-btn.active { background: var(--primary-color); color: #fff; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: middle; }
+    thead { background-color: #e9e9e9; }
+    .date-cell { font-weight: bold; }
+    .note-input { width: 90%; }
+    .accordion-item {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .accordion-header {
+      background: #eee;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .accordion-header:hover { background: #ddd; }
+    .accordion-body {
+      display: none;
+      background: var(--container-bg);
+      transition: max-height 0.3s;
+    }
+    .accordion-body.open { display: block; }
+    .accordion-count { font-weight: normal; font-size: 0.9em; color: #555; }
+    #offDaysList, #mySelectionsList { list-style-type: disc; padding-left: 20px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; }
+    .mode-toggle-btn { margin-left: 8px; background: #6c757d; }
+    .mode-toggle-btn:hover { background: #5a6268; }
+  </style>
+</head>
+<body data-theme="light">
+<div class="container">
+  <div class="top-bar">
+    <div id="userInfo"></div>
+    <div>
+      <button id="toggleModeBtn" class="btn mode-toggle-btn">Dark Mode</button>
+      <button id="logoutBtn" class="btn logout-btn hidden">Log Out</button>
+    </div>
+  </div>
+
+  <h1>Firebase Admin & Rota Editor</h1>
+
+  <!-- SIGN-UP & LOGIN -->
+  <div id="signupForm">
+    <h2>Sign Up</h2>
+    <div class="form-group">
+      <label for="signupName">Name</label>
+      <input type="text" id="signupName" placeholder="Name" required />
+    </div>
+    <div class="form-group">
+      <label for="signupEmail">Email</label>
+      <input type="email" id="signupEmail" placeholder="Email" required />
+    </div>
+    <div class="form-group">
+      <label for="signupPassword">Password</label>
+      <input type="password" id="signupPassword" placeholder="Password" required />
+    </div>
+    <button id="signupBtn" class="btn">Sign Up</button>
+    <p><em><a href="#" id="showLoginLink">Log in</a></em></p>
+  </div>
+  <div id="loginForm" class="hidden">
+    <h2>Log In</h2>
+    <div class="form-group">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" placeholder="Email" required />
+    </div>
+    <div class="form-group">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" placeholder="Password" required />
+    </div>
+    <button id="loginBtn" class="btn">Log In</button>
+    <p><em><a href="#" id="showSignupLink">Sign up</a></em></p>
+  </div>
+
+  <!-- TABS -->
+  <div id="tabsContainer" class="hidden">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="selectOffTab">Select Off</button>
+      <button class="tab-btn" data-tab="mySelectionsTab">My Selections</button>
+      <button id="adminTabBtn" class="tab-btn hidden" data-tab="adminTab">Admin</button>
+    </div>
+  </div>
+
+  <!-- TAB 1: Select Off Days -->
+  <div id="selectOffTab" class="hidden">
+    <h2>Select Saturdays Off (2025)</h2>
+    <div id="accordionContainer"></div>
+    <button id="confirmBtn" class="btn">Confirm Off Days</button>
+    <div id="selectedOffDays" class="hidden">
+      <h3>Your Selections</h3>
+      <ul id="offDaysList"></ul>
+    </div>
+  </div>
+
+  <!-- TAB 2: My Selections -->
+  <div id="mySelectionsTab" class="hidden">
+    <h2>My Selections</h2>
+    <ul id="mySelectionsList"></ul>
+    <h3>Update Name</h3>
+    <div class="form-group">
+      <input type="text" id="displayNameInput" placeholder="New name..." />
+      <button id="updateNameBtn" class="btn">Update</button>
+    </div>
+    <button id="viewRotaBtn" class="btn">View Rota</button>
+    <div id="rotaDisplay" class="hidden">
+      <h3>Rota</h3>
+      <div id="rotaContent"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Admin Panel -->
+  <div id="adminTab" class="hidden">
+    <h2>Admin Panel</h2>
+    <!-- Open/Close Buttons for Admin Sections -->
+    <button id="openAdminSectionsBtn" class="btn">Open Admin Sections</button>
+    <button id="closeAdminSectionsBtn" class="btn">Close Admin Sections</button>
+    <br/><br/>
+    <button id="loadAllDaysBtn" class="btn">Load All Selections</button>
+    <button id="createRotaBtn" class="btn">Create Rota</button>
+    <button id="editRotaBtn" class="btn">Edit Rota</button>
+    <div id="allDaysContainer" style="display:none;"></div>
+    <div id="rotaEditor" class="hidden">
+      <h3>Edit Rota</h3>
+      <div id="rotaEditorContent"></div>
+      <button id="saveRotaEditsBtn" class="btn">Save Rota Edits</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    updateProfile,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    updateDoc,
+    deleteField
+  } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBI7Xt-EP3rpYMQPueWHYI5trukgD1kmsI",
+    authDomain: "it-development-tracker.firebaseapp.com",
+    projectId: "it-development-tracker",
+    storageBucket: "it-development-tracker.appspot.com",
+    messagingSenderId: "435218632288",
+    appId: "1:435218632288:web:1e75f88bbff7c61aab3d05",
+    measurementId: "G-51JHFH5564"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const body = document.querySelector('body');
+  const userInfo = document.getElementById('userInfo');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const toggleModeBtn = document.getElementById('toggleModeBtn');
+
+  const signupForm = document.getElementById('signupForm');
+  const signupName = document.getElementById('signupName');
+  const signupEmail = document.getElementById('signupEmail');
+  const signupPassword = document.getElementById('signupPassword');
+  const signupBtn = document.getElementById('signupBtn');
+  const showLoginLink = document.getElementById('showLoginLink');
+
+  const loginForm = document.getElementById('loginForm');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const showSignupLink = document.getElementById('showSignupLink');
+
+  const tabsContainer = document.getElementById('tabsContainer');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const selectOffTab = document.getElementById('selectOffTab');
+  const mySelectionsTab = document.getElementById('mySelectionsTab');
+  const adminTabBtn = document.getElementById('adminTabBtn');
+  const adminTab = document.getElementById('adminTab');
+
+  const accordionContainer = document.getElementById('accordionContainer');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const selectedOffDays = document.getElementById('selectedOffDays');
+  const offDaysList = document.getElementById('offDaysList');
+
+  const mySelectionsList = document.getElementById('mySelectionsList');
+  const displayNameInput = document.getElementById('displayNameInput');
+  const updateNameBtn = document.getElementById('updateNameBtn');
+  const viewRotaBtn = document.getElementById('viewRotaBtn');
+  const rotaDisplay = document.getElementById('rotaDisplay');
+  const rotaContent = document.getElementById('rotaContent');
+
+  const loadAllDaysBtn = document.getElementById('loadAllDaysBtn');
+  const createRotaBtn = document.getElementById('createRotaBtn');
+  const editRotaBtn = document.getElementById('editRotaBtn');
+  const allDaysContainer = document.getElementById('allDaysContainer');
+  const rotaEditor = document.getElementById('rotaEditor');
+  const rotaEditorContent = document.getElementById('rotaEditorContent');
+  const saveRotaEditsBtn = document.getElementById('saveRotaEditsBtn');
+
+  const openAdminSectionsBtn = document.getElementById('openAdminSectionsBtn');
+  const closeAdminSectionsBtn = document.getElementById('closeAdminSectionsBtn');
+
+  const adminNames = ["Sonia", "James", "Leeandro"];
+
+  showLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    signupForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  });
+  showSignupLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    signupForm.classList.remove('hidden');
+  });
+
+  signupBtn.addEventListener('click', async () => {
+    try {
+      const name = signupName.value.trim();
+      const email = signupEmail.value.trim();
+      const password = signupPassword.value.trim();
+      if (!name || !email || !password) {
+        alert("Fill out all fields.");
+        return;
+      }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      alert("Signed up as " + name);
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  });
+
+  loginBtn.addEventListener('click', async () => {
+    try {
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value.trim();
+      if (!email || !password) {
+        alert("Enter email and password.");
+        return;
+      }
+      await signInWithEmailAndPassword(auth, email, password);
+      alert("Logged in!");
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await signOut(auth);
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const displayName = user.displayName || user.email || "User";
+      userInfo.textContent = `Hello, ${displayName}`;
+      logoutBtn.classList.remove('hidden');
+      signupForm.classList.add('hidden');
+      loginForm.classList.add('hidden');
+      tabsContainer.classList.remove('hidden');
+      if (adminNames.includes(displayName)) {
+        adminTabBtn.classList.remove('hidden');
+      } else {
+        adminTabBtn.classList.add('hidden');
+      }
+      showTab('selectOffTab');
+      await loadMySelections();
+    } else {
+      userInfo.textContent = "";
+      logoutBtn.classList.add('hidden');
+      tabsContainer.classList.add('hidden');
+      selectOffTab.classList.add('hidden');
+      mySelectionsTab.classList.add('hidden');
+      adminTab.classList.add('hidden');
+      signupForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+    }
+  });
+
+  toggleModeBtn.addEventListener('click', () => {
+    const currentTheme = body.getAttribute('data-theme');
+    if (currentTheme === 'light') {
+      body.setAttribute('data-theme', 'dark');
+      toggleModeBtn.textContent = 'Light Mode';
+    } else {
+      body.setAttribute('data-theme', 'light');
+      toggleModeBtn.textContent = 'Dark Mode';
+    }
+  });
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tabId = btn.dataset.tab;
+      showTab(tabId);
+    });
+  });
+  function showTab(tabId) {
+    selectOffTab.classList.add('hidden');
+    mySelectionsTab.classList.add('hidden');
+    adminTab.classList.add('hidden');
+    if (tabId === 'selectOffTab') {
+      selectOffTab.classList.remove('hidden');
+    } else if (tabId === 'mySelectionsTab') {
+      mySelectionsTab.classList.remove('hidden');
+      loadMySelections();
+    } else if (tabId === 'adminTab') {
+      adminTab.classList.remove('hidden');
+    }
+  }
+
+  const saturdaysByMonth = {};
+  function generateSaturdaysByMonth() {
+    const start = new Date(2025, 0, 1);
+    const end   = new Date(2026, 0, 1);
+    while (start < end) {
+      if (start.getDay() === 6) {
+        const m = start.getMonth() + 1;
+        const d = new Date(start);
+        if (!saturdaysByMonth[m]) saturdaysByMonth[m] = [];
+        saturdaysByMonth[m].push(d);
+      }
+      start.setDate(start.getDate() + 1);
+    }
+  }
+  function formatDate(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  generateSaturdaysByMonth();
+
+  for (const month in saturdaysByMonth) {
+    const monthNum = parseInt(month, 10);
+    const accItem = document.createElement('div');
+    accItem.classList.add('accordion-item');
+    const accHeader = document.createElement('div');
+    accHeader.classList.add('accordion-header');
+    accHeader.innerHTML = `<strong>Month ${monthNum}</strong> <span class="accordion-count"></span>`;
+    const accBody = document.createElement('div');
+    accBody.classList.add('accordion-body');
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Off?</th>
+        <th>Note</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    saturdaysByMonth[month].forEach((satDate, idx) => {
+      const row = document.createElement('tr');
+      const numCell = document.createElement('td');
+      numCell.textContent = idx + 1;
+      const dateCell = document.createElement('td');
+      dateCell.classList.add('date-cell');
+      dateCell.textContent = formatDate(satDate);
+      const offCell = document.createElement('td');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.date = formatDate(satDate);
+      offCell.appendChild(checkbox);
+      const noteCell = document.createElement('td');
+      const noteInput = document.createElement('input');
+      noteInput.type = 'text';
+      noteInput.classList.add('note-input');
+      noteInput.placeholder = 'Note...';
+      noteInput.dataset.date = formatDate(satDate);
+      noteCell.appendChild(noteInput);
+      row.appendChild(numCell);
+      row.appendChild(dateCell);
+      row.appendChild(offCell);
+      row.appendChild(noteCell);
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.classList.add('btn');
+    selectAllBtn.textContent = 'Select All in Month';
+    selectAllBtn.style.marginTop = '10px';
+    selectAllBtn.addEventListener('click', () => {
+      const checks = tbody.querySelectorAll('input[type="checkbox"]');
+      checks.forEach(ch => ch.checked = true);
+      updateMonthSelectionCount(accHeader, tbody);
+    });
+    accBody.appendChild(table);
+    accBody.appendChild(selectAllBtn);
+    accItem.appendChild(accHeader);
+    accItem.appendChild(accBody);
+    accordionContainer.appendChild(accItem);
+    accHeader.addEventListener('click', () => {
+      accBody.classList.toggle('open');
+      updateMonthSelectionCount(accHeader, tbody);
+    });
+    tbody.addEventListener('change', () => {
+      updateMonthSelectionCount(accHeader, tbody);
+    });
+  }
+  function updateMonthSelectionCount(headerEl, tbody) {
+    const checkboxes = tbody.querySelectorAll('input[type="checkbox"]');
+    let count = 0;
+    checkboxes.forEach(cb => { if (cb.checked) count++; });
+    const labelSpan = headerEl.querySelector('.accordion-count');
+    labelSpan.textContent = ` - ${count} selected`;
+  }
+
+  confirmBtn.addEventListener('click', async () => {
+    if (!auth.currentUser) { alert("Log in required."); return; }
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][data-date]');
+    const selectedDates = [];
+    checkboxes.forEach(cb => {
+      if (cb.checked) {
+        const date = cb.dataset.date;
+        const noteInput = document.querySelector(`.note-input[data-date="${date}"]`);
+        const noteValue = noteInput ? noteInput.value.trim() : '';
+        selectedDates.push({ date, note: noteValue });
+      }
+    });
+    offDaysList.innerHTML = '';
+    if (selectedDates.length === 0) {
+      offDaysList.innerHTML = '<li>No days selected.</li>';
+    } else {
+      selectedDates.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${item.date}</strong>${item.note ? ` — ${item.note}` : ''}`;
+        offDaysList.appendChild(li);
+      });
+    }
+    selectedOffDays.classList.remove('hidden');
+    selectedOffDays.scrollIntoView({ behavior: 'smooth' });
+    const uid = auth.currentUser.uid;
+    const userDocRef = doc(db, "daysOff", uid);
+    const existingSnap = await getDoc(userDocRef);
+    let existingData = {};
+    if (existingSnap.exists()) { existingData = existingSnap.data(); }
+    selectedDates.forEach(item => {
+      existingData[item.date] = item.note;
+    });
+    existingData.displayName = auth.currentUser.displayName;
+    await setDoc(userDocRef, existingData);
+    alert("Saved!");
+  });
+
+  async function loadMySelections() {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const userDocRef = doc(db, "daysOff", uid);
+    const snap = await getDoc(userDocRef);
+    mySelectionsList.innerHTML = '';
+    if (!snap.exists()) {
+      mySelectionsList.innerHTML = '<li>No selections yet.</li>';
+      return;
+    }
+    const data = snap.data();
+    const { displayName, ...offDays } = data;
+    const entries = Object.entries(offDays).sort();
+    if (entries.length === 0) {
+      mySelectionsList.innerHTML = '<li>No selections yet.</li>';
+      return;
+    }
+    entries.forEach(([date, note]) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${date}</strong>${note ? ' - ' + note : ''} 
+        <button class="btn remove-btn" data-date="${date}">Remove</button>`;
+      mySelectionsList.appendChild(li);
+    });
+    const removeBtns = mySelectionsList.querySelectorAll('.remove-btn');
+    removeBtns.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const d = btn.dataset.date;
+        if (!confirm(`Remove ${d}?`)) return;
+        await updateDoc(userDocRef, { [d]: deleteField() });
+        alert(`${d} removed.`);
+        loadMySelections();
+      });
+    });
+  }
+
+  async function loadRota() {
+    const rotaDocRef = doc(db, "rota", "current");
+    const rotaSnap = await getDoc(rotaDocRef);
+    if (!rotaSnap.exists()) {
+      rotaContent.innerHTML = "<p>No rota yet.</p>";
+    } else {
+      const data = rotaSnap.data();
+      let sortedDates = Object.keys(data.rota).sort();
+      let html = `<p>Generated At: ${data.generatedAt.toDate().toLocaleString()}</p>`;
+      html += `<table border="1" cellpadding="5"><thead><tr><th>Date</th><th>Available Users</th></tr></thead><tbody>`;
+      sortedDates.forEach(date => {
+        const users = data.rota[date];
+        html += `<tr><td>${date}</td><td>${users.join(", ")}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      rotaContent.innerHTML = html;
+    }
+    rotaDisplay.classList.remove("hidden");
+  }
+
+  viewRotaBtn.addEventListener('click', async () => {
+    await loadRota();
+  });
+
+  createRotaBtn.addEventListener('click', async () => {
+    try {
+      const daysOffColl = collection(db, "daysOff");
+      const querySnap = await getDocs(daysOffColl);
+      let rota = {};
+      for (let m in saturdaysByMonth) {
+        saturdaysByMonth[m].forEach(dateObj => {
+          const dateStr = formatDate(dateObj);
+          rota[dateStr] = [];
+        });
+      }
+      querySnap.forEach(docSnap => {
+        const userData = docSnap.data();
+        const userName = userData.displayName || docSnap.id;
+        const offDates = Object.keys(userData).filter(key => key !== "displayName");
+        for (const date in rota) {
+          if (!offDates.includes(date)) {
+            rota[date].push(userName);
+          }
+        }
+      });
+      await setDoc(doc(db, "rota", "current"), {
+        rota: rota,
+        generatedAt: new Date()
+      });
+      alert("Rota created!");
+    } catch (error) {
+      console.error("Error creating rota:", error);
+      alert("Error: " + error.message);
+    }
+  });
+
+  editRotaBtn.addEventListener('click', async () => {
+    const rotaDocRef = doc(db, "rota", "current");
+    const rotaSnap = await getDoc(rotaDocRef);
+    if (!rotaSnap.exists()) {
+      alert("No rota exists to edit.");
+      return;
+    }
+    const data = rotaSnap.data();
+    const rota = data.rota;
+    let sortedDates = Object.keys(rota).sort();
+    let html = `<table border="1" cellpadding="5"><thead><tr><th>Date</th><th>Available Users (comma separated)</th></tr></thead><tbody>`;
+    sortedDates.forEach(date => {
+      const usersStr = rota[date].join(", ");
+      html += `<tr>
+        <td>${date}</td>
+        <td><input type="text" data-date="${date}" value="${usersStr}" style="width:100%;" /></td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    rotaEditorContent.innerHTML = html;
+    rotaEditor.classList.remove("hidden");
+  });
+
+  saveRotaEditsBtn.addEventListener('click', async () => {
+    const inputs = rotaEditorContent.querySelectorAll('input[data-date]');
+    let updatedRota = {};
+    inputs.forEach(input => {
+      const date = input.dataset.date;
+      const users = input.value.split(',').map(s => s.trim()).filter(s => s !== "");
+      updatedRota[date] = users;
+    });
+    const rotaDocRef = doc(db, "rota", "current");
+    await setDoc(rotaDocRef, {
+      rota: updatedRota,
+      generatedAt: new Date()
+    });
+    alert("Rota updated.");
+    rotaEditor.classList.add("hidden");
+    await loadRota();
+  });
+
+  loadAllDaysBtn.addEventListener('click', async () => {
+    allDaysContainer.innerHTML = "";
+    try {
+      const daysOffColl = collection(db, "daysOff");
+      const querySnap = await getDocs(daysOffColl);
+      if (querySnap.empty) {
+        allDaysContainer.innerHTML = "<p>No selections yet.</p>";
+        return;
+      }
+      let tableHTML = `<table><thead><tr><th>Name</th><th>UID</th><th>Off Days</th></tr></thead><tbody>`;
+      querySnap.forEach(docSnap => {
+        const uid = docSnap.id;
+        const data = docSnap.data();
+        const displayName = data.displayName || uid;
+        const { displayName: disp, ...offDays } = data;
+        const dayEntries = Object.entries(offDays).sort();
+        let userDaysHTML = "<ul>";
+        dayEntries.forEach(([date, note]) => {
+          userDaysHTML += `<li><strong>${date}</strong>${note ? ": " + note : ""}</li>`;
+        });
+        userDaysHTML += "</ul>";
+        tableHTML += `<tr><td>${displayName}</td><td>${uid}</td><td>${userDaysHTML}</td></tr>`;
+      });
+      tableHTML += "</tbody></table>";
+      allDaysContainer.innerHTML = tableHTML;
+    } catch (err) {
+      console.error("Error:", err);
+      allDaysContainer.innerHTML = `<p style="color:red;">${err.message}</p>`;
+    }
+  });
+
+  // Open/Close Admin Sections Buttons
+  openAdminSectionsBtn.addEventListener('click', () => {
+    allDaysContainer.style.display = 'block';
+    rotaEditor.style.display = 'block';
+  });
+  closeAdminSectionsBtn.addEventListener('click', () => {
+    allDaysContainer.style.display = 'none';
+    rotaEditor.style.display = 'none';
+  });
+</script>
+</body>
+</html>
