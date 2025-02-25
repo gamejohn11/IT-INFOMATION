@@ -224,15 +224,7 @@
     deleteField
   } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBI7Xt-EP3rpYMQPueWHYI5trukgD1kmsI",
-    authDomain: "it-development-tracker.firebaseapp.com",
-    projectId: "it-development-tracker",
-    storageBucket: "it-development-tracker.appspot.com",
-    messagingSenderId: "435218632288",
-    appId: "1:435218632288:web:1e75f88bbff7c61aab3d05",
-    measurementId: "G-51JHFH5564"
-  };
+  
 
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
